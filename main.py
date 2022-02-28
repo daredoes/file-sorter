@@ -170,7 +170,7 @@ def _make_extension_to_folder_object(config: dict = None) -> dict:
     data: dict = {}
     for folder, extensions in config_object.items():
         for ext in extensions:
-            data[ext] = folder
+            data[ext.lower()] = folder
     return data
 
 
@@ -216,7 +216,7 @@ def get_or_create_dir(dir_name: str) -> str:
 
 def get_file_extension(file_name: str) -> Optional[str]:
     if os.path.isfile(file_name):
-        return pathlib.Path(file_name).suffix
+        return ".".join(pathlib.Path(file_name).suffixes).lower()
 
 
 def _move_file(filepath: str, new_filepath: str) -> Optional[pathlib.Path]:
@@ -299,7 +299,7 @@ class FileSorter:
         for p in get_all_files_in_path(path):
             the_file: pathlib.Path = pathlib.Path(p)
             parent_folder: pathlib.Path = the_file.parent
-            grouped_folder = extensions.get(the_file.suffix.strip("."))
+            grouped_folder = extensions.get(get_file_extension(p))
             if grouped_folder:
                 new_file_path: str = str(
                     pathlib.Path(f"{parent_folder}/{grouped_folder}/{the_file.name}")
@@ -378,11 +378,17 @@ def remove_extensions(
         print("Removed extensions")
 
 
-@app.command(help="Adds the given extensions to the given folder")
+@app.command(help="Link extensions to a folder for when sorting occurs.")
 def add_extensions(
-    folder: str,
+    folder: str = typer.Option(
+        default=None,
+        prompt="Enter a folder name for the extensions to be grouped into.",
+        help="A folder name that extensions will be grouped in.",
+    ),
     ext: str = typer.Option(
-        default=None, prompt="Enter a list of extensions separated by commas"
+        default=None,
+        prompt="Enter a list of extensions separated by commas",
+        help="A comma separated list of extensions. Extensions will be stripped of whitespace and periods, and forced to lowercase",
     ),
 ):
     extensions = [extension.strip(" .").lower() for extension in ext.split(",")]
