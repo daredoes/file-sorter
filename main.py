@@ -244,7 +244,7 @@ class FileSorter:
 
     def _save_extensions(self) -> None:
         data = defaultdict(list)
-        for ext, folder in self._extensions_to_folders.items():
+        for ext, folder in self.extensions_to_folders().items():
             data[folder].append(ext)
         _create_config_file(data)
         self._reload_extensions()
@@ -255,31 +255,33 @@ class FileSorter:
     def _add_extension(
         self, extension: str, folder_name: str, replace: bool = True
     ) -> bool:
-        if self._extensions_to_folders.get(extension):
+        if self.extensions_to_folders().get(extension):
             if replace:
-                self._extensions_to_folders[extension] = folder_name
+                self.extensions_to_folders()[extension] = folder_name
                 return True
         else:
-            self._extensions_to_folders[extension] = folder_name
+            self.extensions_to_folders()[extension] = folder_name
             return True
 
-    def _remove_extension(
-        self, extension: str
-    ) -> bool:
+    def _remove_extension(self, extension: str) -> bool:
         try:
-            del self._extensions_to_folders[extension]
+            del self.extensions_to_folders()[extension]
             return True
         except Exception as e:
             return False
 
-    def remove_extension(self, extension: str) -> bool:
-        removed = self._remove_extension(extension)
+    def remove_extensions(self, extensions: list) -> bool:
+        removed = False
+        for extension in extensions:
+            removed = self._remove_extension(extension)
         if removed:
             self.save_extensions()
         return removed
 
-    def add_extension(self, extension: str, folder_name: str) -> bool:
-        added = self._add_extension(extension, folder_name)
+    def add_extensions(self, extensions: list, folder_name: str) -> bool:
+        added = False
+        for extension in extensions:
+            added = self._add_extension(extension, folder_name)
         if added:
             self.save_extensions()
         return added
@@ -353,14 +355,45 @@ class FileSorter:
             print("*")
             print(stars)
 
-@app.command(help='Prints out an alphabetical list of extensions and the folders they will be sorted into.')
+
+@app.command(
+    help="Prints out an alphabetical list of extensions and the folders they will be sorted into."
+)
 def list_extensions():
     sorter: FileSorter = FileSorter()
     extensions = sorter.extensions_to_folders()
     for key in sorted(extensions.keys()):
         print(f"{key}: {extensions[key]}")
 
-@app.command(help='Sorts the files of a folder, or the current working directory if none is given.')
+
+@app.command(help="Adds the given extensions to the given folder")
+def remove_extensions(
+    ext: str = typer.Option(
+        default=None, prompt="Enter a list of extensions separated by commas"
+    )
+):
+    extensions = [extension.strip(" .").lower() for extension in ext.split(",")]
+    sorter: FileSorter = FileSorter()
+    if sorter.remove_extensions(extensions):
+        print("Removed extensions")
+
+
+@app.command(help="Adds the given extensions to the given folder")
+def add_extensions(
+    folder: str,
+    ext: str = typer.Option(
+        default=None, prompt="Enter a list of extensions separated by commas"
+    ),
+):
+    extensions = [extension.strip(" .").lower() for extension in ext.split(",")]
+    sorter: FileSorter = FileSorter()
+    if sorter.add_extensions(extensions, folder):
+        print("Added extensions")
+
+
+@app.command(
+    help="Sorts the files of a folder, or the current working directory if none is given."
+)
 def sort(
     path: str = typer.Option(
         default=os.getcwd(), help="A path to a directory on your computer to sort"
@@ -375,7 +408,7 @@ def sort(
     ),
 ):
     sorter: FileSorter = FileSorter()
-    if '~' in path:
+    if "~" in path:
         path = os.path.expanduser(path)
     sorter.prepare_files_for_sort(path, levels=levels)
     sorter.move_prepared_files(dry_run=dry_run)
