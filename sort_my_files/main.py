@@ -1,6 +1,5 @@
 from collections import defaultdict
 import json
-import re
 from typing import Optional
 import typer
 import os
@@ -226,7 +225,7 @@ def _move_file(filepath: str, new_filepath: str) -> Optional[pathlib.Path]:
         moved_file: pathlib.Path = the_file.rename(new_filepath)
         return moved_file
     except Exception as e:
-        print(e)
+        typer.echo(e)
         pass
 
 
@@ -317,14 +316,14 @@ class FileSorter:
                 for folder_path in get_all_folders_in_path(path):
                     sorted_files.update(self._sort(folder_path, next_level))
         else:
-            print(f"The path '{path}' cannot be found or was not a directory.")
+            typer.echo(f"The path '{path}' cannot be found or was not a directory.")
         return sorted_files
 
     def prepare_files_for_sort(
         self, path: str, levels: int = 0, replace: bool = False
     ) -> dict:
         sorted_files: dict = self._sort(path=path, levels=levels)
-        print(f"Found {len(sorted_files.keys())} files")
+        typer.echo(f"Found {len(sorted_files.keys())} files")
         if replace:
             self.sorted_files = sorted_files
         else:
@@ -334,26 +333,26 @@ class FileSorter:
     def move_prepared_files(self, dry_run: bool = False) -> None:
         count: int = len(self.sorted_files.keys())
         if dry_run:
-            print("DRY RUN\n" * 3)
-        print(f"Sorting {count} file(s)")
+            typer.echo("DRY RUN\n" * 3)
+        typer.echo(f"Sorting {count} file(s)")
         stars: str = len(f"Sorting {count} file(s)") * "*"
-        print(stars)
+        typer.echo(stars)
         for index, file_data in enumerate(self.sorted_files.items(), start=1):
-            print("*")
-            print(f"* Sorting file {index}/{count}")
+            typer.echo("*")
+            typer.echo(f"* Sorting file {index}/{count}")
             filepath, new_filepath = file_data
             new_file = (
                 new_filepath
                 if dry_run
                 else _move_file(filepath, new_filepath).resolve()
             )
-            print("*")
+            typer.echo("*")
             if new_file:
-                print(f"* {'Would have m' if dry_run else 'M'}oved to: {new_file}")
+                typer.echo(f"* {'Would have m' if dry_run else 'M'}oved to: {new_file}")
             else:
-                print(f"* Failed to move file")
-            print("*")
-            print(stars)
+                typer.echo(f"* Failed to move file")
+            typer.echo("*")
+            typer.echo(stars)
 
 
 @app.command(
@@ -363,7 +362,7 @@ def list_extensions():
     sorter: FileSorter = FileSorter()
     extensions = sorter.extensions_to_folders()
     for key in sorted(extensions.keys()):
-        print(f"{key}: {extensions[key]}")
+        typer.echo(f"{key}: {extensions[key]}")
 
 
 @app.command(help="Adds the given extensions to the given folder")
@@ -375,7 +374,7 @@ def remove_extensions(
     extensions = [extension.strip(" .").lower() for extension in ext.split(",")]
     sorter: FileSorter = FileSorter()
     if sorter.remove_extensions(extensions):
-        print("Removed extensions")
+        typer.echo("Removed extensions")
 
 
 @app.command(help="Link extensions to a folder for when sorting occurs.")
@@ -394,7 +393,7 @@ def add_extensions(
     extensions = [extension.strip(" .").lower() for extension in ext.split(",")]
     sorter: FileSorter = FileSorter()
     if sorter.add_extensions(extensions, folder):
-        print("Added extensions")
+        typer.echo("Added extensions")
 
 
 @app.command(
